@@ -8,5 +8,6 @@ resource "aws_instance" "duly-instance" {
     Environment = "production"
     ManagedBy   = "terraform"
     Owner       = "lawrence"
+    CostCenter  = "portfolio"
   }
 }

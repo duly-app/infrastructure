@@ -38,6 +38,7 @@ All resources are tagged with:
 - `Environment` — deployment environment (production)
 - `Owner` — resource owner
 - `ManagedBy` — "terraform" (indicates IaC management)
+- `CostCenter` — "portfolio"
 
 ## CI/CD
 
