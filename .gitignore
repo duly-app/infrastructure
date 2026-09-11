@@ -1,0 +1,32 @@
+# Terraform state and backups
+*.tfstate
+*.tfstate.*
+
+# Terraform cache and lock
+.terraform/
+.terraform.lock.hcl
+
+# Local Terraform overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files (sensitive)
+*.tfvars
+*.tfvars.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore plan files
+*.tfplan
+
+# tflint
+*.tflint.hcl
+*.tflint.d/*

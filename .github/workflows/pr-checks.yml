@@ -1,0 +1,31 @@
+name: Pull Request Checks
+
+on:
+- pull_request
+- merge_group
+
+concurrency:
+  # Only allow one run at a time of this workflow per PR
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: "1.16.1"
+    - name: Initialize Terraform
+      run: terraform init
+    - name: Validate Terraform
+      run: terraform validate
+    - name: Run formatting checks
+      run: terraform fmt -check -recursive
+    - name: Set up tflint
+      uses: terraform-linters/setup-tflint@v4
+    - name: Run tflint
+      run: tflint --init && tflint --recursive --format compact
