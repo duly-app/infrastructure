@@ -9,6 +9,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+permissions:
+    id-token: write
 jobs:
   format:
     name: Check Formatting
@@ -19,8 +21,14 @@ jobs:
       uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: "1.16.1"
+    - uses: aws-actions/configure-aws-credentials@v6.2.4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
+      env:
+        ACTIONS_STEP_DEBUG: true
     - name: Initialize Terraform
-      run: terraform init
+      run: terraform init -backend=false
     - name: Validate Terraform
       run: terraform validate
     - name: Run formatting checks
