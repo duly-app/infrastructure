@@ -95,14 +95,9 @@ resource "aws_security_group" "duly-sg" {
     }
   }
 
-  tags = {
-    Name        = "duly-sg"
-    Project     = "duly"
-    Environment = "production"
-    ManagedBy   = "terraform"
-    Owner       = "lawrence"
-    CostCenter  = "portfolio"
-  }
+  tags = merge(local.common_tags, {
+    Name = "duly-sg"
+  })
 
   lifecycle {
     create_before_destroy = true
