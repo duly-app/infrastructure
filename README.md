@@ -156,8 +156,10 @@ The S3 bucket and DynamoDB table are managed by Terraform but create a bootstrap
 1. Comment out the `backend "s3"` block in `main.tf`
 2. Run `terraform init` (uses local state temporarily)
 3. Run `terraform apply` (creates S3 bucket and DynamoDB table)
-4. Uncomment the `backend "s3"` block in `main.tf`
-5. Run `terraform init -backend-config=backend.hcl -migrate-state` (migrates state to S3)
+4. Uncomment the `backend "s3"` block in `main.tf` and set the bucket name that
+   step 3 created in `backend.hcl`
+5. Run `terraform init -backend-config=backend.hcl -migrate-state` (migrates
+   state to S3)
 
 #### Configuration
 
@@ -166,13 +168,13 @@ Create `terraform/terraform.tfvars` (not committed to git):
 my_ip = "YOUR_IP/32"  # Your home/office IP for SSH access
 ```
 
-Create/update `terraform/backend.hcl` (not committed to git):
+That is the only file you need to create. `backend.hcl` is committed, so a
+fresh clone initialises without having to reconstruct it:
+
 ```hcl
 bucket         = "terraform-state-duly-YOUR_ACCOUNT_ID"
-key            = "terraform.tfstate"
 region         = "eu-north-1"
 dynamodb_table = "terraform-state-lock"
-encrypt        = true
 ```
 
 ### Usage
@@ -204,7 +206,7 @@ terraform apply
 - `variables.tf` — Input variables and shared locals
 - `outputs.tf` — Exported values for other systems
 - `session_manager.tf` — SSM Session Manager access to the instance
-- `backend.hcl` — Backend configuration (not in git, see `.gitignore`)
+- `backend.hcl` — Where the state lives; passed to `init -backend-config`
 
 ### Cost Management
 
@@ -235,7 +237,4 @@ All resources are tagged with:
 
 ## CI/CD
 
-GitHub Actions validates Terraform on pull requests.
-- `terraform fmt -check` — formatting
-- `terraform validate` — syntax
-- `tflint` — best practices and style
+GitHub Actions runs two jobs on pull requests.

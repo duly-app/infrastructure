@@ -30,8 +30,6 @@ terraform.rc
 # you do; only the plugin cache it downloads is ignored.
 .tflint.d/
 
-# backend config
-backend.hcl
 # Local dev overrides (repo paths, uid/gid)
 dev/.env
 !dev/.env.example

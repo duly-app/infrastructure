@@ -10,26 +10,21 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-    id-token: write
+  contents: read
+
 jobs:
-  format:
-    name: Check Formatting
+  terraform:
+    name: Terraform Checks
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: terraform
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v2
+      uses: hashicorp/setup-terraform@v4
       with:
         terraform_version: "1.16.1"
-    - uses: aws-actions/configure-aws-credentials@v6.2.4
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ${{ vars.AWS_REGION }}
-      env:
-        ACTIONS_STEP_DEBUG: true
     - name: Initialize Terraform
       run: terraform init -backend=false
     - name: Validate Terraform
@@ -40,3 +35,43 @@ jobs:
       uses: terraform-linters/setup-tflint@v4
     - name: Run tflint
       run: tflint --init && tflint --recursive --format compact
+
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: github.event_name == 'merge_group' || github.event.pull_request.head.repo.fork == false
+    defaults:
+      run:
+        working-directory: terraform
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: "1.16.1"
+    - uses: aws-actions/configure-aws-credentials@v6.2.4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION }}
+    - name: Initialize Terraform
+      run: terraform init -input=false -backend-config=backend.hcl
+    - name: Plan
+      id: plan
+      env:
+        TF_VAR_my_ip: ${{ secrets.MY_IP }}
+      run: terraform plan -input=false -no-color -out=tfplan
+    - name: Summarise the plan
+      if: always() && steps.plan.outcome != 'skipped'
+      run: |
+        {
+          echo '### Terraform plan'
+          echo '```'
+          # The summary caps at 1MiB, and a plan that long is unreadable anyway.
+          terraform show -no-color tfplan 2>/dev/null | head -n 500 \
+            || echo 'No plan produced; see the Plan step.'
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
