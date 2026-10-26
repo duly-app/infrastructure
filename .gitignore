@@ -32,3 +32,6 @@ terraform.rc
 
 # backend config
 backend.hcl
+# Local dev overrides (repo paths, uid/gid)
+dev/.env
+!dev/.env.example
