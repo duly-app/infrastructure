@@ -26,8 +26,8 @@ terraform.rc
 # Ignore plan files
 *.tfplan
 
-# tflint
-*.tflint.hcl
+# tflint. The config itself is committed, so CI lints with the same ruleset as
+# you do; only the plugin cache it downloads is ignored.
 .tflint.d/
 
 # backend config
