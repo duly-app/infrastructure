@@ -28,7 +28,7 @@ terraform.rc
 
 # tflint
 *.tflint.hcl
-*.tflint.d/*
+.tflint.d/
 
 # backend config
 backend.hcl

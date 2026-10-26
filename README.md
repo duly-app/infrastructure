@@ -6,7 +6,7 @@ that put them somewhere.
 
 | Directory | What it is |
 | --- | --- |
-| `*.tf` (repo root) | Terraform for AWS: EC2, VPC, security groups, remote state |
+| `terraform/` | Terraform for AWS: EC2, VPC, security groups, remote state |
 | `dev/` | Docker Compose stack for local development |
 | `k8s/` | Kubernetes manifests (the production target) |
 
@@ -132,6 +132,8 @@ Deploys Duly on a single EC2 instance running Kubernetes. Resources are tagged
 with project, environment, owner, and managed-by tags for organization and cost
 tracking.
 
+All commands in this section run from `terraform/`.
+
 ### Prerequisites
 
 - Terraform >= 1.6
@@ -159,12 +161,12 @@ The S3 bucket and DynamoDB table are managed by Terraform but create a bootstrap
 
 #### Configuration
 
-Create `terraform.tfvars` (not committed to git):
+Create `terraform/terraform.tfvars` (not committed to git):
 ```hcl
 my_ip = "YOUR_IP/32"  # Your home/office IP for SSH access
 ```
 
-Create/update `backend.hcl` (not committed to git):
+Create/update `terraform/backend.hcl` (not committed to git):
 ```hcl
 bucket         = "terraform-state-duly-YOUR_ACCOUNT_ID"
 key            = "terraform.tfstate"
