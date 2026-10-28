@@ -33,3 +33,6 @@ terraform.rc
 # Local dev overrides (repo paths, uid/gid)
 dev/.env
 !dev/.env.example
+
+# The real Anthropic key, consumed by `make secrets`
+k8s/chatbot/anthropic.env

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: duly-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: duly
+    component: postgres
+    tier: database
+  ports:
+  - port: 5432
+    targetPort: postgres-port
+    protocol: TCP

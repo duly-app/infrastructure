@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: duly-postgres-config
+  labels:
+    app: duly
+    component: postgres
+    tier: database
+data:
+  POSTGRES_USER: admin
+  POSTGRES_DB: duly_postgres

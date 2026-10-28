@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: duly-chatbot
+spec:
+  type: ClusterIP
+  selector:
+    app: duly
+    component: chatbot
+    tier: backend
+  ports:
+  - port: 8000
+    targetPort: chatbot-port
+    protocol: TCP
