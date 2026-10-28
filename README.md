@@ -128,7 +128,7 @@ Kubernetes Job.
 
 ## Kubernetes
 
-`k8s/` is the production target, exercised locally against minikube first. It
+`k8s/base/` is the production target, exercised locally against minikube first. It
 is a kustomize build, so one command applies everything, and `namespace: duly`
 in the root kustomization keeps it out of `default`. `make help` lists the
 targets.
@@ -171,13 +171,13 @@ unlike compose, which bind-mounts them.
 
 ### Secrets
 
-Everything in `k8s/` is a dev credential, already public in the app repos'
+Everything in `k8s/base/` is a dev credential, already public in the app repos'
 tracked `.env.dev`, so those Secrets are committed as they are. **The Anthropic
 key is real, and this repository is public**, so it has no manifest. It is
 generated from a gitignored file:
 
 ```bash
-echo 'ANTHROPIC_API_KEY=sk-ant-...' > k8s/chatbot/anthropic.env
+echo 'ANTHROPIC_API_KEY=sk-ant-...' > k8s/base/chatbot/anthropic.env
 make secrets
 ```
 
@@ -195,7 +195,7 @@ than failing quietly.
 ### Usage
 
 ```bash
-make up                         # secrets, then kubectl apply -k k8s/
+make up                         # secrets, then kubectl apply -k k8s/base
 make status                     # what is running, plus recent events
 make logs svc=duly-backend
 make restart svc=duly-backend   # after reloading an image
@@ -226,10 +226,10 @@ Two Ingress objects, not one:
 | `/api` | `duly-backend:5000` | passed through |
 | `/` | `duly-frontend:80` | SPA fallback inside the image |
 
-`ingress.yaml` carries the backend and frontend rules, and the paths reach them
+`base/ingress.yaml` carries the backend and frontend rules, and the paths reach them
 unchanged, because the Flask blueprints really are mounted under `/api`.
 
-`k8s/chatbot/chatbot-ingress.yaml` is separate because the chatbot mounts its
+`k8s/base/chatbot/chatbot-ingress.yaml` is separate because the chatbot mounts its
 router at the root and so needs `/api/chat` stripped — and
 `nginx.ingress.kubernetes.io/rewrite-target` applies to **every rule in the
 object that carries it**. Putting that annotation on the shared Ingress would

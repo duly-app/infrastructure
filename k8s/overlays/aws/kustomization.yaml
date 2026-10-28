@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: duly
+
+resources:
+  - ../../base
+
+images:
+  - name: duly-backend
+    newName: ghcr.io/duly-app/duly-backend
+    newTag: demo
+  - name: duly-chatbot
+    newName: ghcr.io/duly-app/duly-chatbot
+    newTag: demo
+  - name: duly-frontend
+    newName: ghcr.io/duly-app/duly-frontend
+    newTag: demo
+  - name: duly-embedder-qa
+    newName: ghcr.io/duly-app/duly-embedder-qa
+    newTag: demo
+
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+  - target:
+      kind: Job
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+
+  # k3s ships Traefik rather than ingress-nginx. Hits both Ingresses.
+  - target:
+      kind: Ingress
+    patch: |-
+      - op: replace
+        path: /spec/ingressClassName
+        value: traefik

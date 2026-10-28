@@ -2,7 +2,7 @@
 
 NAMESPACE   ?= duly
 COMPOSE     := docker compose -f dev/docker-compose.dev.yml
-SECRETS_ENV := k8s/chatbot/anthropic.env
+SECRETS_ENV := k8s/base/chatbot/anthropic.env
 
 .DEFAULT_GOAL := help
 .PHONY: help up down reset nuke secrets status logs restart compose-up compose-down
@@ -14,10 +14,10 @@ help:
 
 ## --- Kubernetes (minikube) ---
 
-up: secrets ## Apply every manifest under k8s/
-	kubectl apply -k k8s/
+up: secrets ## Apply the base (minikube) manifests
+	kubectl apply -k k8s/base
 
-secrets: ## Recreate the Anthropic secret from k8s/chatbot/anthropic.env
+secrets: ## Recreate the Anthropic secret from k8s/base/chatbot/anthropic.env
 	@if [ -f $(SECRETS_ENV) ]; then \
 		kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f - >/dev/null; \
 		kubectl create secret generic duly-chatbot-anthropic -n $(NAMESPACE) \
