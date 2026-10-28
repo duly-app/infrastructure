@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migration
+  labels:
+    app: duly
+    component: migration
+    tier: backend
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+      - name: migration
+        image: duly-backend:prod
+        command: ["alembic", "upgrade", "head"]
+        imagePullPolicy: Never
+        envFrom:
+        - configMapRef:
+            name: duly-postgres-config
+        - secretRef:
+            name: duly-postgres-secret
+        env:
+          - name: DATABASE_URL
+            value: postgresql+psycopg2://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@duly-postgres:5432/$(POSTGRES_DB)
+      restartPolicy: Never
+      initContainers:
+      # Wait for the postgres pod to be ready
+      - name: wait-for-postgres
+        image: pgvector/pgvector:pg16
+        command: ["sh", "-c", "until pg_isready -h duly-postgres -U admin; do sleep 1; done"]

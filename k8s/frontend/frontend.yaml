@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duly-frontend
+  labels:
+    app: duly
+    component: frontend
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: duly
+      component: frontend
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: duly
+        component: frontend
+        tier: frontend
+    spec:
+      containers:
+        - name: duly-frontend
+          image: duly-frontend:prod
+          imagePullPolicy: Never
+          ports:
+            - name: frontend-port
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: frontend-port
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+            periodSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: frontend-port
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+            periodSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "48Mi"
+            limits:
+              cpu: "200m"
+              memory: "96Mi"

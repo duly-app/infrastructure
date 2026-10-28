@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duly-backend
+  labels:
+    app: duly
+    component: backend
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: duly
+      component: backend
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: duly
+        component: backend
+        tier: backend
+    spec:
+      containers:
+        - name: duly-backend
+          image: duly-backend:prod
+          imagePullPolicy: Never
+          ports:
+            - name: backend-port
+              containerPort: 5000
+              protocol: TCP
+          envFrom:
+          - configMapRef:
+              name: duly-backend-config
+          - configMapRef:
+              name: duly-postgres-config
+          - secretRef:
+              name: duly-postgres-secret
+          - secretRef:
+              name: duly-backend-secret
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg2://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@duly-postgres:5432/$(POSTGRES_DB)
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: backend-port
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: backend-port
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "512Mi"
