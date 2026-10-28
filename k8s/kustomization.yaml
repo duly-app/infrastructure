@@ -9,6 +9,7 @@ resources:
   - ingress.yaml
   - backend
   - chatbot
+  - embedder-qa
   - frontend
   - migration
   - postgres

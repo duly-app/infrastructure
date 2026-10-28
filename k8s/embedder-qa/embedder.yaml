@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duly-embedder-qa
+  labels:
+    app: duly
+    component: embedder-qa
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: duly
+      component: embedder-qa
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: duly
+        component: embedder-qa
+        tier: backend
+    spec:
+      containers:
+        - name: duly-embedder-qa
+          image: duly-embedder-qa:prod
+          imagePullPolicy: Never
+          ports:
+            - name: embedder-port
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+          - configMapRef:
+              name: duly-embedder-qa-config
+          - secretRef:
+              name: duly-embedder-qa-secret
+          startupProbe:
+            httpGet:
+              path: /health
+              port: embedder-port
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: embedder-port
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: embedder-port
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "200Mi"
+            limits:
+              memory: "512Mi"

@@ -7,5 +7,5 @@ metadata:
     component: backend
     tier: backend
 data:
-  EMBEDDER_URL: http://embedder-qa:8000
+  EMBEDDER_URL: http://duly-embedder-qa:8000
   WEB_CONCURRENCY: "1"

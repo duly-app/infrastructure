@@ -40,6 +40,12 @@ spec:
           env:
             - name: DATABASE_URL
               value: postgresql+psycopg2://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@duly-postgres:5432/$(POSTGRES_DB)
+          startupProbe:
+            httpGet:
+              path: /health
+              port: backend-port
+            periodSeconds: 5
+            failureThreshold: 12
           livenessProbe:
             httpGet:
               path: /health
