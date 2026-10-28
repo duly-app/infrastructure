@@ -1,10 +1,11 @@
 # Local development. `make help` lists the targets.
 
-NAMESPACE  ?= duly
-COMPOSE    := docker compose -f dev/docker-compose.dev.yml
+NAMESPACE   ?= duly
+COMPOSE     := docker compose -f dev/docker-compose.dev.yml
+SECRETS_ENV := k8s/chatbot/anthropic.env
 
 .DEFAULT_GOAL := help
-.PHONY: help up down reset status logs restart compose-up compose-down
+.PHONY: help up down reset nuke secrets status logs restart compose-up compose-down
 
 help:
 	@grep -hE '^[a-z-]+:.*##' $(MAKEFILE_LIST) \
@@ -13,13 +14,30 @@ help:
 
 ## --- Kubernetes (minikube) ---
 
-up: ## Apply every manifest under k8s/
+up: secrets ## Apply every manifest under k8s/
 	kubectl apply -k k8s/
 
-down: ## Delete the namespace, taking Secrets and PVCs with it
-	kubectl delete namespace $(NAMESPACE) --ignore-not-found --wait
+secrets: ## Recreate the Anthropic secret from k8s/chatbot/anthropic.env
+	@if [ -f $(SECRETS_ENV) ]; then \
+		kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f - >/dev/null; \
+		kubectl create secret generic duly-chatbot-anthropic -n $(NAMESPACE) \
+			--from-env-file=$(SECRETS_ENV) --dry-run=client -o yaml | kubectl apply -f -; \
+	else \
+		echo "!! $(SECRETS_ENV) is missing, so the chatbot will sit in"; \
+		echo "!! CreateContainerConfigError. Create it with one line:"; \
+		echo "!!   ANTHROPIC_API_KEY=sk-ant-..."; \
+	fi
 
-reset: down up ## Tear down and bring back up
+down: ## Remove the workloads, keeping the database and secrets
+	kubectl delete deploy,statefulset,job,service,ingress \
+		-n $(NAMESPACE) --all --ignore-not-found --wait
+
+reset: down up ## Recycle the workloads, keeping data
+
+nuke: ## Delete the namespace, DESTROYING the database and secrets
+	@printf 'This deletes the %s namespace, its PVC and its data. Type yes: ' $(NAMESPACE)
+	@read ok && [ "$$ok" = yes ] || { echo "aborted"; exit 1; }
+	kubectl delete namespace $(NAMESPACE) --ignore-not-found --wait
 
 status: ## What is running, and the most recent events
 	kubectl get all -n $(NAMESPACE)

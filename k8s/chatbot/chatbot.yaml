@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duly-chatbot
+  labels:
+    app: duly
+    component: chatbot
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: duly
+      component: chatbot
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: duly
+        component: chatbot
+        tier: backend
+    spec:
+      containers:
+        - name: duly-chatbot
+          image: duly-chatbot:prod
+          imagePullPolicy: Never
+          ports:
+            - name: chatbot-port
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+          - configMapRef:
+              name: duly-chatbot-config
+          - secretRef:
+              name: duly-chatbot-secret
+          - secretRef:
+              name: duly-chatbot-anthropic
+          startupProbe:
+            httpGet:
+              path: /health
+              port: chatbot-port
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: chatbot-port
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: chatbot-port
+            initialDelaySeconds: 5
+            timeoutSeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "192Mi"
+            limits:
+              memory: "512Mi"

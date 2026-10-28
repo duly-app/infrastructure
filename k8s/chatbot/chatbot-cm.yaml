@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: duly-chatbot-config
+  labels:
+    app: duly
+    component: chatbot
+    tier: backend
+data:
+  DULY_SERVICE_URI: "http://duly-backend:5000/api"

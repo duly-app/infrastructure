@@ -8,6 +8,7 @@ resources:
   - namespace.yaml
   - ingress.yaml
   - backend
+  - chatbot
   - frontend
   - migration
   - postgres
