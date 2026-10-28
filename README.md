@@ -18,8 +18,8 @@ here (a submodule pins a commit).
 
 ## Local development
 
-The compose stack runs all four services plus Postgres, embedding services,
-and a Loki/Prometheus/Grafana observability stack.
+The compose stack runs all four services plus Postgres, the embedding
+service, and a Loki/Prometheus/Grafana observability stack.
 
 - `dev/docker-compose.dev.yml` — the stack
 - `dev/.env.example` — repository paths and uid/gid; copy to `dev/.env`
@@ -125,6 +125,140 @@ Kubernetes Job.
 > **There are no backups.** The dev database holds real notes. `docker compose
 > down` is safe; `down -v` destroys them. To test a cold start, compose with a throwaway
 > project name so it gets its own volumes.
+
+## Kubernetes
+
+`k8s/` is the production target, exercised locally against minikube first. It
+is a kustomize build, so one command applies everything, and `namespace: duly`
+in the root kustomization keeps it out of `default`. `make help` lists the
+targets.
+
+| Workload | Kind | Notes |
+| --- | --- | --- |
+| `duly-postgres` | StatefulSet | pgvector, backed by `postgres-pvc` |
+| `duly-migration` | Job | `alembic upgrade head`, waits for postgres first |
+| `duly-backend` | Deployment | Flask under gunicorn; also runs the sweeper |
+| `duly-chatbot` | Deployment | FastAPI; the only service that calls out to the internet |
+| `duly-embedder-qa` | Deployment | the embedding model, baked into the image |
+| `duly-frontend` | Deployment | nginx serving the prebuilt bundle |
+
+### Prerequisites
+
+```bash
+minikube start
+minikube addons enable ingress
+```
+
+Images are built from the app repos and loaded into the cluster by hand — there
+is no registry locally, which is why every Deployment sets
+`imagePullPolicy: Never`. A reused tag plus the default `IfNotPresent` would
+silently serve a stale image; `Never` fails loudly instead, with
+`ErrImageNeverPull`, if you forgot to load.
+
+```bash
+cd ../duly-backend && docker build --target prod -t duly-backend:prod .
+minikube image load duly-backend:prod
+```
+
+Repeat for `duly-frontend:prod`, `duly-chatbot:prod` and `duly-embedder-qa:prod`.
+Note the `duly-` prefix: the embedder's repository is `embedder-qa`, but every
+image, Service and workload here is named `duly-*`.
+
+The backend image is also the migration Job, and later the sweeper — it carries
+`alembic.ini` and `migrations/`, so only the container's `command` differs. A
+new migration therefore needs a rebuild and reload before the Job will see it,
+unlike compose, which bind-mounts them.
+
+### Secrets
+
+Everything in `k8s/` is a dev credential, already public in the app repos'
+tracked `.env.dev`, so those Secrets are committed as they are. **The Anthropic
+key is real, and this repository is public**, so it has no manifest. It is
+generated from a gitignored file:
+
+```bash
+echo 'ANTHROPIC_API_KEY=sk-ant-...' > k8s/chatbot/anthropic.env
+make secrets
+```
+
+`make up` runs `secrets` first, so a reset restores it automatically. The target
+pipes `create --dry-run=client` into `apply`, which makes re-running harmless,
+and the chatbot picks the Secret up as a third `envFrom`. Without the file the
+chatbot sits in `CreateContainerConfigError`; `make secrets` says so rather
+than failing quietly.
+
+> **Do not quote the value in `anthropic.env`.** Compose's `env_file` strips
+> surrounding quotes and `kubectl create secret --from-env-file` does not, so a
+> quoted key reaches Anthropic wrapped in `"` and comes back as
+> `401 invalid x-api-key`. base64 hides it, so the Secret looks correct.
+
+### Usage
+
+```bash
+make up                         # secrets, then kubectl apply -k k8s/
+make status                     # what is running, plus recent events
+make logs svc=duly-backend
+make restart svc=duly-backend   # after reloading an image
+make down                       # remove the workloads, keep data and secrets
+make reset                      # down, then up
+make nuke                       # delete the namespace, destroying both
+```
+
+`make down` deliberately leaves the namespace in place, which is what keeps the
+PersistentVolumeClaim and the Secrets alive. `make nuke` is the only target
+that loses data, and it asks for confirmation.
+
+`make restart` matters because loading an image replaces it in the node's
+daemon while a running pod keeps the container it already started — nothing
+picks up new code until the pod is recreated.
+
+A Job is immutable once created, so editing the migration Job and re-applying
+is rejected. Either `kubectl delete job -n duly duly-migration` first, or
+`make reset`.
+
+### Routing
+
+Two Ingress objects, not one:
+
+| Path | Service | |
+| --- | --- | --- |
+| `/api/chat` | `duly-chatbot:8000` | prefix stripped |
+| `/api` | `duly-backend:5000` | passed through |
+| `/` | `duly-frontend:80` | SPA fallback inside the image |
+
+`ingress.yaml` carries the backend and frontend rules, and the paths reach them
+unchanged, because the Flask blueprints really are mounted under `/api`.
+
+`k8s/chatbot/chatbot-ingress.yaml` is separate because the chatbot mounts its
+router at the root and so needs `/api/chat` stripped — and
+`nginx.ingress.kubernetes.io/rewrite-target` applies to **every rule in the
+object that carries it**. Putting that annotation on the shared Ingress would
+rewrite `/api` and `/` as well, and with no capture group to substitute they
+would resolve to nothing, breaking the whole app. The controller merges
+Ingresses, so routing is unaffected by the split, and `/api/chat` wins over
+`/api` on longest prefix.
+
+A 404 from FastAPI rather than from nginx means the rewrite fired but produced
+the wrong path.
+
+### Reaching it
+
+minikube runs on the docker driver here, so the node IP (`minikube ip`) is
+**not routable from macOS** — it lives inside the Docker VM. Port-forward the
+ingress controller instead:
+
+```bash
+kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
+```
+
+Then the app is at `http://localhost:8080`. `minikube tunnel` also works and
+gives you port 80 directly, but it needs sudo and collides with the compose
+nginx, so bring that down first.
+
+Neither Ingress sets `host:`, so both match any hostname and the same manifests
+work through a port-forward, a tunnel and an EC2 public DNS name.
+`ingressClassName` is the one field that must change on AWS, where k3s ships
+Traefik rather than ingress-nginx — which is what an overlay is for.
 
 ## Terraform
 
