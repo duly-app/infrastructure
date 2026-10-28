@@ -5,6 +5,7 @@ namespace: duly
 
 resources:
   - ../../base
+  - middleware.yaml
 
 images:
   - name: duly-backend
@@ -41,3 +42,47 @@ patches:
       - op: replace
         path: /spec/ingressClassName
         value: traefik
+
+  # Traefik ignores the nginx rewrite annotations entirely, so the chatbot
+  # would receive /api/chat/threads/... unstripped and answer 404. Swap them
+  # for a middleware reference, and drop the regex path, which only existed
+  # because ingress-nginx needed capture groups.
+  # A "/" inside a JSON Pointer key is escaped as ~1.
+  - target:
+      kind: Ingress
+      name: duly-chatbot
+    patch: |-
+      - op: remove
+        path: /metadata/annotations/nginx.ingress.kubernetes.io~1use-regex
+      - op: remove
+        path: /metadata/annotations/nginx.ingress.kubernetes.io~1rewrite-target
+      - op: add
+        path: /metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares
+        value: duly-strip-api-chat@kubernetescrd
+      - op: replace
+        path: /spec/rules/0/http/paths/0/path
+        value: /api/chat
+      - op: replace
+        path: /spec/rules/0/http/paths/0/pathType
+        value: Prefix
+
+secretGenerator:
+  - name: duly-backend-secret
+    behavior: replace
+    envs:
+      - secrets/backend.env
+  - name: duly-chatbot-secret
+    behavior: replace
+    envs:
+      - secrets/chatbot.env
+  - name: duly-embedder-qa-secret
+    behavior: replace
+    envs:
+      - secrets/embedder.env
+  - name: duly-postgres-secret
+    behavior: replace
+    envs:
+      - secrets/postgres.env
+
+generatorOptions:
+  disableNameSuffixHash: true

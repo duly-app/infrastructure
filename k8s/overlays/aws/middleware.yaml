@@ -1,0 +1,18 @@
+# Traefik's equivalent of ingress-nginx's rewrite-target annotation. The
+# chatbot mounts its router at the root, so /api/chat has to come off before
+# the request reaches it.
+#
+# Referenced from the Ingress as "<namespace>-<name>@kubernetescrd", hence
+# duly-strip-api-chat@kubernetescrd once the overlay's namespace is applied.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api-chat
+  labels:
+    app: duly
+    component: chatbot
+    tier: backend
+spec:
+  stripPrefix:
+    prefixes:
+      - /api/chat

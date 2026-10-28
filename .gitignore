@@ -36,3 +36,6 @@ dev/.env
 
 # The real Anthropic key, consumed by `make secrets`
 k8s/base/chatbot/anthropic.env
+
+# Real keys for the AWS overlay, created on the instance
+k8s/overlays/aws/secrets/*.env
